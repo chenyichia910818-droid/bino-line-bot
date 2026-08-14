@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import crypto from 'node:crypto';
 import express from 'express';
-import OpenAI from 'openai';
 import { findKnownAnswer, safetyText, systemPrompt } from './knowledge.mjs';
 
 const required = ['LINE_CHANNEL_SECRET', 'LINE_CHANNEL_ACCESS_TOKEN'];
@@ -9,7 +8,6 @@ for (const name of required) if (!process.env[name]) throw new Error(`Missing ${
 
 const app = express();
 const lineApi = 'https://api.line.me/v2/bot/message';
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 function validSignature(rawBody, signature = '') {
   const expected = crypto.createHmac('sha256', process.env.LINE_CHANNEL_SECRET).update(rawBody).digest('base64');
@@ -28,9 +26,26 @@ async function notifyStaff(event, question) {
 }
 
 async function generatedAnswer(question) {
-  if (!openai) return null;
-  const response = await openai.responses.create({ model: process.env.OPENAI_MODEL || 'gpt-5', store: false, instructions: systemPrompt, input: question });
-  return response.output_text?.trim() || null;
+  if (!process.env.COHERE_API_KEY) return null;
+  try {
+    const response = await fetch('https://api.cohere.com/v2/chat', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.COHERE_API_KEY}`, 'Content-Type': 'application/json', 'X-Client-Name': 'bino-line-bot' },
+      body: JSON.stringify({
+        model: process.env.COHERE_MODEL || 'command-a-plus-05-2026',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: question }
+        ]
+      })
+    });
+    if (!response.ok) throw new Error(`Cohere returned ${response.status}: ${await response.text()}`);
+    const body = await response.json();
+    return body.message?.content?.filter(item => item.type === 'text').map(item => item.text).join('').trim() || null;
+  } catch (error) {
+    console.error('Cohere request failed', error);
+    return null;
+  }
 }
 
 async function respond(event) {
