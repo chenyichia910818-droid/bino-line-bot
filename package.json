@@ -1,0 +1,14 @@
+{
+  "name": "bino-line-bot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "openai": "^5.23.0"
+  }
+}
