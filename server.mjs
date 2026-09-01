@@ -55,7 +55,7 @@ async function respond(event) {
   let needsHuman = false;
   if (!answer) {
     answer = await generatedAnswer(question);
-    if (!answer || /建立客服案件/.test(answer)) { answer = '我已建立客服案件，請提供目前畫面截圖、錯誤訊息與已嘗試的操作，林芳誼將於原對話接手協助。'; needsHuman = true; }
+    if (!answer || /建立客服案件|轉交.*公司同仁/.test(answer)) { answer = '我已轉交公司同仁協助確認。請提供目前畫面截圖、錯誤訊息與已嘗試的操作，我們會在原對話協助您。'; needsHuman = true; }
   }
   await lineRequest('reply', { replyToken: event.replyToken, messages: [{ type: 'text', text: answer.slice(0, 5000) }] });
   if (needsHuman) await notifyStaff(event, question);
